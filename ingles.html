@@ -1,0 +1,333 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Puzzle Game</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg,#171d3b,#393c80);
+    color: white;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 700px;
+    margin: 35px auto;
+    background: #252b50;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 0 25px #0006;
+}
+
+h1 { color: #79e5ff; }
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 25px 0;
+}
+
+.stats div {
+    background: #343c70;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.game {
+    background: #30365f;
+    padding: 25px;
+    border-radius: 15px;
+    margin-top: 20px;
+}
+
+.word {
+    font-size: 35px;
+    color: #ffd76b;
+    letter-spacing: 5px;
+    margin: 25px;
+}
+
+input {
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    font-size: 17px;
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+}
+
+button {
+    background: #00bcd4;
+    color: #101b35;
+    border: none;
+    padding: 13px 20px;
+    border-radius: 10px;
+    margin: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+button:hover {
+    background: #79e5ff;
+    transform: scale(1.04);
+}
+
+.options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.options button {
+    background: #555c99;
+    color: white;
+}
+
+#feedback {
+    min-height: 25px;
+    font-weight: bold;
+    margin: 20px;
+}
+
+.hidden { display: none; }
+
+footer {
+    margin-top: 30px;
+    color: #abb4db;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🌎 ENGLISH PUZZLE GAME</h1>
+<p>¡Aprende inglés jugando!</p>
+
+<div class="stats">
+    <div>⭐ Puntos: <span id="points">0</span></div>
+    <div>⏱️ Tiempo: <span id="timer">60</span>s</div>
+    <div>🏆 Nivel: <span id="level">1</span></div>
+</div>
+
+<div class="game">
+
+<h2 id="gameTitle">🧩 Word Scramble</h2>
+
+<p id="instructions">
+Ordena las letras y descubre la palabra.
+</p>
+
+<div class="word" id="challenge">LOOHCS</div>
+
+<input id="answer" placeholder="Escribe tu respuesta">
+
+<div class="options hidden" id="options"></div>
+
+<p id="feedback"></p>
+
+<button onclick="checkAnswer()">Comprobar</button>
+<button onclick="nextGame()">Siguiente reto ➜</button>
+
+</div>
+
+<button onclick="restartGame()">🔄 Reiniciar juego</button>
+
+</div>
+
+<footer>
+English Puzzle Game | Educational Project
+</footer>
+
+<script>
+
+let points = 0;
+let level = 1;
+let time = 60;
+let gameIndex = 0;
+let answered = false;
+let timerInterval;
+
+const games = [
+    {type:"scramble", word:"SCHOOL", mixed:"LOOHCS"},
+    {type:"translate", word:"APPLE", question:"¿Qué significa APPLE?", options:["Manzana","Perro","Casa"], answer:"Manzana"},
+    {type:"scramble", word:"FRIEND", mixed:"DNERIF"},
+    {type:"translate", word:"HOUSE", question:"¿Qué significa HOUSE?", options:["Agua","Casa","Libro"], answer:"Casa"},
+    {type:"scramble", word:"ORANGE", mixed:"GROANE"},
+    {type:"translate", word:"WATER", question:"¿Qué significa WATER?", options:["Agua","Fuego","Flor"], answer:"Agua"},
+    {type:"scramble", word:"GARDEN", mixed:"NEDRAG"},
+    {type:"translate", word:"BOOK", question:"¿Qué significa BOOK?", options:["Mesa","Libro","Lápiz"], answer:"Libro"},
+    {type:"scramble", word:"PLANET", mixed:"TENALP"},
+    {type:"translate", word:"BEAUTIFUL", question:"¿Qué significa BEAUTIFUL?", options:["Hermoso","Grande","Pequeño"], answer:"Hermoso"}
+];
+
+let current = games[0];
+
+function loadGame() {
+
+    if(gameIndex >= games.length) {
+        gameIndex = 0;
+        level++;
+        document.getElementById("level").textContent = level;
+    }
+
+    current = games[gameIndex];
+    answered = false;
+
+    document.getElementById("feedback").textContent = "";
+    document.getElementById("answer").value = "";
+
+    const options = document.getElementById("options");
+    options.innerHTML = "";
+
+    if(current.type === "scramble") {
+
+        document.getElementById("gameTitle").textContent = "🧩 Word Scramble";
+        document.getElementById("instructions").textContent =
+            "Ordena las letras y descubre la palabra.";
+
+        document.getElementById("challenge").textContent = current.mixed;
+
+        document.getElementById("answer").classList.remove("hidden");
+        options.classList.add("hidden");
+
+    } else {
+
+        document.getElementById("gameTitle").textContent = "🔤 Match the Words";
+        document.getElementById("instructions").textContent = current.question;
+
+        document.getElementById("challenge").textContent = "❓";
+
+        document.getElementById("answer").classList.add("hidden");
+        options.classList.remove("hidden");
+
+        current.options.forEach(option => {
+
+            let btn = document.createElement("button");
+            btn.textContent = option;
+
+            btn.onclick = () => selectOption(option);
+
+            options.appendChild(btn);
+        });
+    }
+}
+
+function checkAnswer() {
+
+    if(current.type !== "scramble" || answered) return;
+
+    let answer = document.getElementById("answer").value.trim().toUpperCase();
+
+    if(answer === current.word) {
+        correct();
+    } else {
+        document.getElementById("feedback").textContent =
+            "❌ Incorrecto. ¡Inténtalo otra vez!";
+        document.getElementById("feedback").style.color = "#ff8585";
+    }
+}
+
+function selectOption(option) {
+
+    if(answered) return;
+
+    if(option === current.answer) {
+        correct();
+    } else {
+        document.getElementById("feedback").textContent =
+            "❌ Respuesta incorrecta. ¡Sigue intentando!";
+        document.getElementById("feedback").style.color = "#ff8585";
+    }
+}
+
+function correct() {
+
+    answered = true;
+    points += 10;
+
+    document.getElementById("points").textContent = points;
+
+    document.getElementById("feedback").textContent =
+        "🎉 ¡Excelente! Respuesta correcta.";
+
+    document.getElementById("feedback").style.color = "#65f5a5";
+}
+
+function nextGame() {
+
+    if(!answered) {
+        document.getElementById("feedback").textContent =
+            "⚠️ Primero resuelve el reto.";
+        return;
+    }
+
+    gameIndex++;
+    loadGame();
+}
+
+function restartGame() {
+
+    points = 0;
+    level = 1;
+    gameIndex = 0;
+    time = 60;
+
+    document.getElementById("points").textContent = 0;
+    document.getElementById("level").textContent = 1;
+    document.getElementById("timer").textContent = 60;
+
+    loadGame();
+
+    clearInterval(timerInterval);
+    startTimer();
+}
+
+function startTimer() {
+
+    timerInterval = setInterval(() => {
+
+        time--;
+
+        document.getElementById("timer").textContent = time;
+
+        if(time <= 0) {
+
+            clearInterval(timerInterval);
+
+            document.getElementById("gameTitle").textContent =
+                "🏆 ¡Tiempo terminado!";
+
+            document.getElementById("instructions").textContent =
+                "Tu puntuación final es: " + points + " puntos.";
+
+            document.getElementById("challenge").textContent = "🎮";
+            document.getElementById("answer").classList.add("hidden");
+            document.getElementById("options").classList.add("hidden");
+            document.getElementById("feedback").textContent =
+                "Presiona Reiniciar para volver a jugar.";
+
+        }
+
+    }, 1000);
+}
+
+loadGame();
+startTimer();
+
+</script>
+<a href="index.html"> Volver al inicio</a>
+</body>
+</html>
